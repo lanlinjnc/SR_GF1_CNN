@@ -7,13 +7,12 @@ import os
 class G_validation:
     mse = nn.MSELoss()
 
-    def __init__(self, network, loader, writer, save_path, kmap=True):
+    def __init__(self, network, loader, writer, save_path):
         self.generator = network
         self.loader = loader
         self.writer = writer
         self.n = loader.dataset.__len__()
         self.save_path = save_path
-        self.kmap = kmap
         self.best = 100
 
     def run(self, epoch):

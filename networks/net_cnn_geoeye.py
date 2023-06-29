@@ -3,18 +3,18 @@
 # @Time    : 2023/6/13 21:22
 # @Author  : lanlin
 # neo卫星：通道注意力机制
+# 参数量：0.41m
 
 
 import torch
 import argparse
 import torch.nn as nn
-from torch.nn import functional as F
 
 
-class MY_CNN_GeoEye(nn.Module):
+class MY_CNN(nn.Module):
     def __init__(self, num_in_ch=1, num_out_ch=1, num_feat=64, upscale=2):
 
-        super(MY_CNN_GeoEye, self).__init__()
+        super(MY_CNN, self).__init__()
         self.upscale = upscale
         self.block1 = nn.Sequential(
             nn.Conv2d(num_in_ch, num_feat, kernel_size=3, padding=1, padding_mode='replicate'),
@@ -32,7 +32,7 @@ class MY_CNN_GeoEye(nn.Module):
         self.block8 = nn.Conv2d(num_feat, num_out_ch, kernel_size=3, padding=1, padding_mode='replicate')
 
     def forward(self, x):
-        x = F.interpolate(x, scale_factor=self.upscale, mode='bicubic', align_corners=False)
+        x = nn.functional.interpolate(x, scale_factor=self.upscale, mode='bicubic', align_corners=False)
         block1 = self.block1(x)
         block2 = self.resblock1(block1)
         block3 = self.resblock2(block2)
@@ -85,6 +85,6 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     test_image_in = torch.ones((1, 1, 256, 256)).to(device)
-    MY_CNN = MY_CNN_GeoEye().to(device)
+    MY_CNN = MY_CNN().to(device)
     test_image_out = MY_CNN(test_image_in)
     print(test_image_out.shape)

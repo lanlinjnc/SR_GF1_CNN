@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2023/6/8 15:46
+# @Time    : 2023/6/29 17:32
 # @Author  : lanlin
 # 融合空间注意力机制和通道注意力机制
-# 参数量：0.79m
+# 参数量：0.94m
 
 
 import math
@@ -17,31 +17,65 @@ class MY_CNN(nn.Module):
     def __init__(self, num_in_ch=1, num_out_ch=1, num_feat=64, upscale=2, num_resblock=10):
         super(MY_CNN, self).__init__()
 
+        upsample_block_num = int(math.log(upscale, 2))
         self.upscale = upscale
-        self.block1 = nn.Sequential(
-            nn.Conv2d(num_in_ch, num_feat, kernel_size=3, padding=1, padding_mode='replicate'),
+
+        # 多尺度，不同大小卷积核concatenation
+        self.block1_1 = nn.Sequential(
+            nn.Conv2d(num_in_ch, 1, kernel_size=3, padding=1, padding_mode='replicate'),
+            nn.LeakyReLU(0.2)
+        )
+        self.block1_2 = nn.Sequential(
+            nn.Conv2d(num_in_ch, 1, kernel_size=5, padding=2, padding_mode='replicate'),
+            nn.LeakyReLU(0.2)
+        )
+        self.block1_3 = nn.Sequential(
+            nn.Conv2d(num_in_ch, 1, kernel_size=7, padding=3, padding_mode='replicate'),
             nn.LeakyReLU(0.2)
         )
 
+        self.block2 = nn.Sequential(
+            nn.Conv2d(3, num_feat, kernel_size=3, padding=1, padding_mode='replicate'),
+            # nn.BatchNorm2d(num_feat)
+        )
+
+        # 残差网络设计，个数？
         resblocks = [ResidualBlock(num_feat) for _ in range(num_resblock)]
         self.resblocks = nn.Sequential(*resblocks)
 
-        self.block3 = nn.Sequential(
+        self.block4 = nn.Sequential(
             nn.Conv2d(num_feat, num_feat, kernel_size=3, padding=1, padding_mode='replicate'),
             # nn.BatchNorm2d(num_feat)
         )
+
         self.SA = SpatialAttention(kernel_size=3)
-        self.block5 = nn.Conv2d(num_feat, num_out_ch, kernel_size=3, padding=1, padding_mode='replicate')
+
+        # PixelShuffler放大 选择放大2或者4倍
+        block6 = [UpsampleBLock(num_feat, 2) for _ in range(upsample_block_num)]
+        self.block6 = nn.Sequential(*block6)
+
+        self.block7 = nn.Conv2d(num_feat, 3, kernel_size=3, padding=1, padding_mode='replicate')
+        self.block8 = nn.Conv2d(4, num_out_ch, kernel_size=3, padding=1, padding_mode='replicate')
 
     def forward(self, x):
-        x = F.interpolate(x, scale_factor=self.upscale, mode='bilinear', align_corners=False)
-        block1 = self.block1(x)
-        block2 = self.resblocks(block1)
-        block3 = self.block3(block2)
-        block4 = block3 * self.SA(block3)  # 将这个权值乘上原输入特征层
-        block5 = self.block5(block1 + block4)
+        x_up = F.interpolate(x, scale_factor=self.upscale, mode='bilinear', align_corners=False)
 
-        return (torch.tanh(block5) + 1) / 2
+        block1_1 = self.block1_1(x)
+        block1_2 = self.block1_2(x)
+        block1_3 = self.block1_3(x)
+        block1 = torch.cat((block1_1, block1_2, block1_3), 1)
+
+        block2 = self.block2(block1)
+
+        block3 = self.resblocks(block2)
+        block4 = self.block4(block3)
+        block5 = block4 * self.SA(block4)  # 将这个权值乘上原输入特征层
+        block6 = self.block6(block2 + block5)
+        block7 = self.block7(block6)
+        block7 = torch.cat((block7, x_up), 1)
+        block8 = self.block8(block7)
+
+        return (torch.tanh(block8) + 1) / 2
 
 
 class ResidualBlock(nn.Module):
@@ -117,6 +151,21 @@ class SpatialAttention(nn.Module):
         return self.sigmoid(x)  # sigmoid激活操作
 
 
+# PixelShuffler 放大模块
+class UpsampleBLock(nn.Module):
+    def __init__(self, in_channels, up_scale):
+        super(UpsampleBLock, self).__init__()
+        self.conv = nn.Conv2d(in_channels, in_channels * up_scale ** 2, kernel_size=3, padding=1, padding_mode='replicate')
+        self.pixel_shuffle = nn.PixelShuffle(up_scale)
+        self.prelu = nn.PReLU()
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.pixel_shuffle(x)
+        x = self.prelu(x)
+        return x
+
+
 if __name__ == "__main__":
 
     # 初始参数设定
@@ -138,6 +187,6 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     test_image_in = torch.ones((1, 1, 128, 128)).to(device)
-    MY_CNN = MY_CNN(num_in_ch=1, num_out_ch=1, num_feat=64, num_resblock=10).to(device)
+    MY_CNN = MY_CNN(num_in_ch=1, num_out_ch=1, num_feat=64).to(device)
     test_image_out = MY_CNN(test_image_in)
     print(test_image_out.shape)

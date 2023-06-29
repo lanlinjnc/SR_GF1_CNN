@@ -20,7 +20,7 @@ def copyFile(fileDir, tarDir):
     pathDir = os.listdir(fileDir)
 
     # 2
-    sample = random.sample(pathDir, 951)
+    sample = random.sample(pathDir, 924)
     # print(sample)
 
     # 3
@@ -32,6 +32,6 @@ def copyFile(fileDir, tarDir):
 
 
 if __name__ == '__main__':
-    train_dir = "E:/mydata/PythonCode/SR_GF1_CNN/datasets/GF2_PAN2_16bit_1m/train/"
-    val_dir = 'E:/mydata/PythonCode/SR_GF1_CNN/datasets/GF2_PAN2_16bit_1m/val/'
+    train_dir = "E:/mydata/PythonCode/SR_GF1_CNN/datasets/GFDM01_PAN_16bit_1m/train/"
+    val_dir = 'E:/mydata/PythonCode/SR_GF1_CNN/datasets/GFDM01_PAN_16bit_1m/val/'
     copyFile(train_dir, val_dir)

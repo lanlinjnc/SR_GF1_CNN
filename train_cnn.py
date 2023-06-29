@@ -16,7 +16,7 @@ from config import config as _config
 from dataset import dataset
 from val_cnn import G_validation
 
-from networks.net_SRResNet import SRResNet as Generator
+from networks.net_cnn0 import MY_CNN as Generator
 
 
 def train(config, epoch_from=0):
@@ -93,6 +93,9 @@ def train(config, epoch_from=0):
     valid = G_validation(generator, valid_data, writer, config['path']['validation'])
 
     # training
+    # print(generator)
+    # total = sum([param.nelement() for param in generator.parameters()])
+    # print("Number of parameter: %.2fM" % (total / 1e6))
     print('start training...')
     for epoch in range(epoch_from, n_epoch):
         generator = generator.train()

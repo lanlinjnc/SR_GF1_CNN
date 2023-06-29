@@ -3,6 +3,7 @@
 # @Time    : 2023/6/13 21:22
 # @Author  : lanlin
 # 空间、通道注意力机制CBMA
+# 参数量：0.79m
 
 
 import torch
@@ -11,38 +12,33 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
-class MY_CNN2(nn.Module):
-    def __init__(self, num_in_ch=1, num_out_ch=1, num_feat=64, upscale=2):
+class MY_CNN(nn.Module):
+    def __init__(self, num_in_ch=1, num_out_ch=1, num_feat=64, upscale=2, num_resblock=10):
 
-        super(MY_CNN2, self).__init__()
+        super(MY_CNN, self).__init__()
         self.upscale = upscale
         self.block1 = nn.Sequential(
             nn.Conv2d(num_in_ch, num_feat, kernel_size=3, padding=1, padding_mode='replicate'),
             nn.LeakyReLU(0.2)
         )
-        self.resblock1 = ResidualBlock(num_feat)
-        self.resblock2 = ResidualBlock(num_feat)
-        self.resblock3 = ResidualBlock(num_feat)
-        self.resblock4 = ResidualBlock(num_feat)
-        self.resblock5 = ResidualBlock(num_feat)
-        self.block7 = nn.Sequential(
+
+        resblocks = [ResidualBlock(num_feat) for _ in range(num_resblock)]
+        self.resblocks = nn.Sequential(*resblocks)
+
+        self.block3 = nn.Sequential(
             nn.Conv2d(num_feat, num_feat, kernel_size=3, padding=1, padding_mode='replicate'),
             nn.BatchNorm2d(num_feat)
         )
-        self.block8 = nn.Conv2d(num_feat, num_out_ch, kernel_size=3, padding=1, padding_mode='replicate')
+        self.block4 = nn.Conv2d(num_feat, num_out_ch, kernel_size=3, padding=1, padding_mode='replicate')
 
     def forward(self, x):
         x = F.interpolate(x, scale_factor=self.upscale, mode='bicubic', align_corners=False)
         block1 = self.block1(x)
-        block2 = self.resblock1(block1)
-        block3 = self.resblock2(block2)
-        block4 = self.resblock3(block3)
-        block5 = self.resblock4(block4)
-        block6 = self.resblock5(block5)
-        block7 = self.block7(block6)
-        block8 = self.block8(block1 + block7)
+        block2 = self.resblocks(block1)
+        block3 = self.block3(block2)
+        block4 = self.block4(block1 + block3)
 
-        return (torch.tanh(block8) + 1) / 2
+        return (torch.tanh(block4) + 1) / 2
 
 
 class ResidualBlock(nn.Module):
@@ -139,7 +135,7 @@ if __name__ == "__main__":
     # 每次程序运行生成的随机数固定
     torch.manual_seed(args.seed)
 
-    test_image_in = torch.ones((1, 1, 256, 256)).to(device)
-    MY_CNN = MY_CNN2().to(device)
+    test_image_in = torch.ones((1, 1, 128, 128)).to(device)
+    MY_CNN = MY_CNN(num_in_ch=1, num_out_ch=1, num_feat=64, num_resblock=10).to(device)
     test_image_out = MY_CNN(test_image_in)
     print(test_image_out.shape)

@@ -5,8 +5,8 @@
 name = 'net_cnn1_x2'  # configurate name for the model: used for saving ckpt, validation, and logs
 config = {
   'train': {
-    'patch_size': 128,
-    'batch_size': 32,
+    'patch_size': 128,  # 训练时所裁剪得到的LR图像大小，这里为不裁剪
+    'batch_size': 16,
     'num_workers': 0,
     'iterations_G': 1500,  # for G: 300000, for C: 200000
     'lr_G': 2e-4,
@@ -23,7 +23,7 @@ config = {
 
   'model': {
     'scale': 2,
-    'kernel_size': 64,
+    'res_num_feat': 64,
     'bits': 10,
   },
 

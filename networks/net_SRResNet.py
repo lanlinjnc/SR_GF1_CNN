@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2023/6/8 15:46
 # @Author  : lanlin
+# 参数量：0.57m
 
 
 import math
@@ -10,11 +11,11 @@ import argparse
 import torch.nn as nn
 
 
-class SRResNet(nn.Module):
+class MY_CNN(nn.Module):
     def __init__(self, num_in_ch=1, num_out_ch=1, num_feat=64, upscale=2):
         upsample_block_num = int(math.log(upscale, 2))
 
-        super(SRResNet, self).__init__()
+        super(MY_CNN, self).__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(num_in_ch, num_feat, kernel_size=9, padding=4),
             nn.PReLU()
@@ -99,6 +100,6 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     test_image_in = torch.ones((1, 1, 128, 128)).to(device)
-    MY_CNN = SRResNet(args.scale).to(device)
+    MY_CNN = MY_CNN(args.scale).to(device)
     test_image_out = MY_CNN(test_image_in)
     print(test_image_out.shape)

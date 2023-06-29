@@ -3,6 +3,7 @@
 # @Time    : 2023/6/13 21:22
 # @Author  : lanlin
 # GeoEye卫星的残差卷积网络
+# 参数量：0.58m
 
 
 import math
@@ -11,10 +12,10 @@ import argparse
 import torch.nn as nn
 
 
-class MY_CNN_NEO(nn.Module):
+class MY_CNN(nn.Module):
     def __init__(self, num_in_ch=1, num_out_ch=1, num_feat=64, upscale=2):
 
-        super(MY_CNN_NEO, self).__init__()
+        super(MY_CNN, self).__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(num_in_ch, num_feat, kernel_size=7, padding=3, padding_mode='replicate'),
             nn.LeakyReLU(0.2)
@@ -54,6 +55,7 @@ class ResidualBlock(nn.Module):
         self.SELayer = SELayer(channels, reduction=16)
 
     def forward(self, x):
+        x = nn.functional.interpolate(x, scale_factor=self.upscale, mode='bicubic', align_corners=False)
         residual = self.conv1(x)
         residual = self.bn1(residual)
         residual = self.lrelu(residual)
@@ -118,6 +120,6 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     test_image_in = torch.ones((1, 1, 256, 256)).to(device)
-    MY_CNN = MY_CNN_NEO().to(device)
+    MY_CNN = MY_CNN().to(device)
     test_image_out = MY_CNN(test_image_in)
     print(test_image_out.shape)
